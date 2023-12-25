@@ -14,7 +14,7 @@ jobs:
 
     - name: Install Chocolatey and Dependencies
       run: |
-        Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iwr https://chocolatey.org/install.ps1 -UseBasicParsing | iex
+        choco source add -n=chocolatey -s=https://chocolatey.org/api/v2/
         choco install ngrok
 
     - name: Configure RDP
@@ -26,18 +26,24 @@ jobs:
         New-LocalUser "admin" -Password $Password -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires
         Add-LocalGroupMember -Group "Remote Desktop Users" -Member "admin"
 
+    - name: Create Ngrok Log File
+      run: |
+        New-Item -Path .\ngrok.log -Type File
+
     - name: Start Ngrok Tunnel
       run: |
         ngrok authtoken ${{ secrets.NGROK_AUTHTOKEN }}
         ngrok tcp 3389 --region us -log=stdout > ngrok.log &
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
     - name: Fetch Ngrok Tunnel Info
       id: ngrok_info
       run: |
         Start-Sleep 10
-        $log_content = Get-Content ngrok
-        $url = $log_content -match 'tcp://(.+?)"'
-        echo "::set-output name=url::$(($matches[1]))"
+        $log_content = Get-Content ngrok.log
+        $url = $log_content | Select-String -Pattern 'tcp://(.+?)"' | ForEach-Object { $_.Matches.Groups[1].Value }
+        echo "::set-output name=url::$url"
+        if (-not $url) { exit 1 }
 
     - name: Post RDP Info to Issue
       uses: peter-evans/create-or-update-comment@v1
