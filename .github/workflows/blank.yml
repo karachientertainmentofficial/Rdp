@@ -1,0 +1,65 @@
+name: Compliant and Secure Windows RDP
+
+on:
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'Duration in minutes (Max 120)'
+        required: true
+        default: '30'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    if: ${{ github.event.inputs.duration <= 120 }}
+    strategy:
+      fail-fast: false
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v2
+
+    - name: Install Chocolatey and Dependencies
+      run: |
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+        iwr https://chocolatey.org/install.ps1 -UseBasicParsing | iex
+        choco install ngrok
+
+    - name: Configure RDP
+      run: |
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
+        Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+        Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+        $Password = ConvertTo-SecureString ${{ secrets.RDP_PASSWORD }} -AsPlainText -Force
+        New-LocalUser "GitHubUser" -Password $Password -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires
+        Add-LocalGroupMember -Group "Remote Desktop Users" -Member "GitHubUser"
+
+    - name: Start Ngrok Tunnel
+      run: |
+        ./ngrok authtoken ${{ secrets.NGROK_AUTHTOKEN }}
+        ./ngrok tcp 3389 --region us -log=stdout > ngrok.log &
+
+    - name: Fetch Ngrok Tunnel Info
+      id: ngrok_info
+      run: |
+        Start-Sleep 10
+        $log_content = Get-Content ./ngrok.log
+        $url = $log_content -match 'tcp://(.+?)"'
+        echo "::set-output name=url::$(($matches[1]))"
+
+    - name: Post RDP Info to Issue
+      if: always()
+      uses: peter-evans/create-or-update-comment@v1
+      with:
+        issue-number: ${{ github.event.inputs.issue_number }}
+        body: |
+          🚀 RDP Session is ready (Expires in ${{ github.event.inputs.duration }} minutes)!
+          - Address: ${{ steps.ngrok_info.outputs.url }}
+          - Username: `GitHubUser`
+          - Password: `The password is shared privately`
+
+    - name: Cleanup
+      if: always()
+      run: |
+        Start-Sleep ${{ github.event.inputs.duration * 60 }}
+        Stop-Computer -Force
