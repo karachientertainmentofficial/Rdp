@@ -22,9 +22,9 @@ jobs:
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
-        $Password = ConvertTo-SecureString "Aa123456789" -AsPlainText -Force
-        New-LocalUser "User" -Password $Password -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires
-        Add-LocalGroupMember -Group "Remote Desktop Users" -Member "User"
+        $Password = ConvertTo-SecureString "hyd12345" -AsPlainText -Force
+        New-LocalUser "admin" -Password $Password -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires
+        Add-LocalGroupMember -Group "Remote Desktop Users" -Member "admin"
 
     - name: Start Ngrok Tunnel
       run: |
@@ -35,7 +35,7 @@ jobs:
       id: ngrok_info
       run: |
         Start-Sleep 10
-        $log_content = Get-Content ./ngrok.log
+        $log_content = Get-Content ngrok.log
         $url = $log_content -match 'tcp://(.+?)"'
         echo "::set-output name=url::$(($matches[1]))"
 
@@ -46,5 +46,5 @@ jobs:
         body: |
           🚀 RDP Session is ready!
           - Address: ${{ steps.ngrok_info.outputs.url }}
-          - Username: `User`
-          - Password: `Aa123456789`
+          - Username: `admin`
+          - Password: `hyd12345`
