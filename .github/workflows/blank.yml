@@ -22,7 +22,7 @@ jobs:
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -name "fDenyTSConnections" -Value 0
         Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
         Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
-        $Password = ConvertTo-SecureString "hyd12345" -AsPlainText -Force
+        $Password = ConvertTo-SecureString "Hyd@hyd12345" -AsPlainText -Force
         New-LocalUser "admin" -Password $Password -PasswordNeverExpires -UserMayNotChangePassword -AccountNeverExpires
         Add-LocalGroupMember -Group "Remote Desktop Users" -Member "admin"
 
@@ -53,4 +53,4 @@ jobs:
           🚀 RDP Session is ready!
           - Address: ${{ env.NGROK_URL }}
           - Username: `admin`
-          - Password: `hyd12345`
+          - Password: `Hyd@hyd12345`
