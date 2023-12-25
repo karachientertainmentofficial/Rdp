@@ -35,7 +35,7 @@ jobs:
       id: ngrok_info
       run: |
         Start-Sleep 10
-        $log_content = Get-Content ngrok.log
+        $log_content = Get-Content ngrok
         $url = $log_content -match 'tcp://(.+?)"'
         echo "::set-output name=url::$(($matches[1]))"
 
