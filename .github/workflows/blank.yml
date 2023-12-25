@@ -28,8 +28,8 @@ jobs:
 
     - name: Start Ngrok Tunnel
       run: |
-        ./ngrok authtoken ${{ secrets.NGROK_AUTHTOKEN }}
-        ./ngrok tcp 3389 --region us -log=stdout > ngrok.log &
+        ngrok authtoken ${{ secrets.NGROK_AUTHTOKEN }}
+        ngrok tcp 3389 --region us -log=stdout > ngrok.log &
 
     - name: Fetch Ngrok Tunnel Info
       id: ngrok_info
